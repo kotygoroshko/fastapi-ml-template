@@ -47,8 +47,8 @@ actions = {
 }
 
 @distance_router.get('/distance/{distance_algorythm}', status_code=200)
-def distance(distance_algorythm: DistanceAlgorythmName, str1: str, str2: str) -> dict:
+def distance(distance_algorythm: DistanceAlgorythmName, line1: str, line2: str) -> dict:
     """
     Calculate distance
     """ 
-    return {"Algorythm selected": distance_algorythm, "Str1": str1, "Str2": str2, "distance": actions[distance_algorythm](str1,str2)}
+    return {'method': distance_algorythm, 'line1': line1, 'line2': line2, 'similarity': actions[distance_algorythm](line1,line2)}
