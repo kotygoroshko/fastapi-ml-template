@@ -24,8 +24,12 @@ class Model:
             'remove_small_words_flag': True,
         }
 
-        self.model = LogisticRegression(multi_class= 'ovr' , random_state = 42, max_iter=1000)
-
+        self.model_readynes = False
+        self.model_train_raning = False
+        self.mode_file_name = 'model.joblib'
+        self.vectorizer_file_name = 'vectorizer.joblib'
+        self.load_model()
+        
     def load_data(self):
         # Открываем ZIP-архив
         with zipfile.ZipFile('data/archive.zip', 'r') as zip_file:
@@ -92,10 +96,9 @@ class Model:
         sentiment_mapping = {'positive': 1, 'negative': 0}
 
         # Replace sentiment values in the 'sentiment' column using the mapping
-        self.data['target'] = self.data['sentiment'].replace(sentiment_mapping)
+        self.data['target'] = self.data['sentiment'].astype(str).replace(sentiment_mapping)
 
     def preprocessing(self, text):
-        self.create_target()
         if self.flags.get('remove_tags_flag', False):
             text = self.remove_tags(text)
         if self.flags.get('remove_links_flag', False):
@@ -107,31 +110,37 @@ class Model:
         return text
 
     def train_model(self):
-        self.data = self.load_data()
-        self.data['review'].apply(self.preprocessing)
+        try:
+            self.model_train_raning = True
+            self.data = self.load_data()
+            self.data['review'].apply(self.preprocessing)
+            self.create_target()
+            # Split data (80% for training, 20% for testing)
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.data['review'], self.data['target'], test_size=0.2, random_state=42)
 
-        # Split data (80% for training, 20% for testing)
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.data['review'], self.data['target'], test_size=0.2, random_state=42)
+            # Робимо фічі за допомогою BoW
+            self.vectorizer = CountVectorizer(stop_words='english', max_features=1_000)
+            self.vectorizer.fit(self.X_train)
+            joblib.dump(self.vectorizer, self.vectorizer_file_name)
+            # Продивляємось що попало в словарик.
+            vocabulary = self.vectorizer.get_feature_names_out()
+            print(vocabulary)
+            print(len(vocabulary))
+            # Трансформуємо X_train та X_test для роботи з моделью.
+            self.X_train_features = self.vectorizer.transform(self.X_train)
+            self.X_test_features = self.vectorizer.transform(self.X_test)
+            # тренуємо модел 
+            self.model = LogisticRegression(multi_class= 'ovr' , random_state = 42, max_iter=1000, verbose=2)
+            self.model.fit(self.X_train_features, self.y_train)
+            self.model_readynes = True
+            # Дивимося метрики моделі
+            self.metrics()
 
-        # Робимо фічі за допомогою BoW
-        vectorizer = CountVectorizer(stop_words='english', max_features=1_000)
-        vectorizer.fit(self.X_train)
-        # Продивляємось що попало в словарик.
-        vocabulary = vectorizer.get_feature_names_out()
-        print(vocabulary)
-        print(len(vocabulary))
-        # Трансформуємо X_train та X_test для роботи з моделью.
-        self.X_train_features = vectorizer.transform(self.X_train)
-        self.X_test_features = vectorizer.transform(self.X_test)
-        # тренуємо модел 
-        self.model.fit(self.X_train_features, self.y_train)
 
-        # Дивимося метрики моделі
-        self.metrics()
-
-
-        # Save the model to a file
-        joblib.dump(self.model, 'model.joblib')
+            # Save the model to a file
+            joblib.dump(self.model, self.mode_file_name)
+        finally:
+            self.model_train_raning = False
 
     def metrics(self):
         # Дивимося метрики моделі
@@ -149,8 +158,24 @@ class Model:
         return {"Accuracy:": accuracy, "Precision:": precision, "Recall:": recall, "F1-Score:": f1}
 
     def load_model(self):
-        # Later, to load the model
-        self.model = joblib.load('model.joblib')
+        # Load the model
+        try:
+            self.model = joblib.load(self.mode_file_name)
+            self.model = joblib.load(self.vectorizer_file_name)
+            self.model_readynes = True
+        except FileNotFoundError:
+            self.model_readynes = False
+            print(f"The file {self.mode_file_name} does not exist.")
+        except Exception as e:
+            self.model_readynes = False
+            print(f"An error occurred: {e}")
+
+    def predict(self, text):
+        if self.model_readynes:
+            return {'predict': self.model.predict(self.preprocessing(text))}
+        else:
+            return {'error':'Model not ready!!!'}
+
     
 
         
