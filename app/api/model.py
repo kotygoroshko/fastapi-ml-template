@@ -12,6 +12,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 import joblib
+from typing import List
 
 
 class Model:
@@ -161,7 +162,7 @@ class Model:
         # Load the model
         try:
             self.model = joblib.load(self.mode_file_name)
-            self.model = joblib.load(self.vectorizer_file_name)
+            self.vectorizer = joblib.load(self.vectorizer_file_name)
             self.model_readynes = True
         except FileNotFoundError:
             self.model_readynes = False
@@ -170,9 +171,11 @@ class Model:
             self.model_readynes = False
             print(f"An error occurred: {e}")
 
-    def predict(self, text):
+    def predict(self, text: List[str]):
         if self.model_readynes:
-            return {'predict': self.model.predict(self.preprocessing(text))}
+            result = self.model.predict(self.vectorizer.transform(map(self.preprocessing,text)))
+            print(result)
+            return {'predict': ','.join(map(str, result))}
         else:
             return {'error':'Model not ready!!!'}
 

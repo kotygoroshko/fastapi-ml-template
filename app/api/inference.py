@@ -1,20 +1,22 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from app.api.model import  Model 
+from app.api.model import  Model
+from typing import List 
 
 inference_router = APIRouter()
 
-class BodyText(BaseModel):
-    text: str
 
 model = Model()
 
+class ItemRequest(BaseModel):
+  text: List[str]
+
 @inference_router.post('/inference/')
-def inference(body_text: BodyText) -> dict:
+def inference(request: ItemRequest) -> dict:
     """
     inference input text
     """ 
-    return model.predict(body_text.text)
+    return model.predict(request.text)
 
 @inference_router.get('/train/')
 def train() -> dict:
