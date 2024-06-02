@@ -17,10 +17,6 @@ def classify_sentences(text: SentencesRequest):
     else:
         return {'error':'Model not ready!!!'}
 
-
-def group_sentences(sentences):
-    pass
-
 @doc_to_vec_router.get('/doc2vec/train/')
 def train() -> dict:
     """
